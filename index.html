@@ -206,6 +206,7 @@ body{background:#0d1117;display:flex;justify-content:center;align-items:center;m
 'use strict';
 const CELL=50,COLS=20,ROWS=12,CW=COLS*CELL,CH=ROWS*CELL;
 const SAVE_KEY='td_v3_save';
+const AW_DELAY=1.5;
 
 // ── MAPS ──────────────────────────────────────
 const MAPS=[
@@ -567,8 +568,8 @@ function update(dt,rawDt){
     st.phase='prep';autoSave();updateUI();
     if(st.wave>=WAVES.length){st.phase='victory';document.getElementById('restartGameOver').style.display='block';}
     else{
-      if(st.autoWave){st.autoWaveTimer=3;st._awSec=3;}
-      setMsg(st.autoWave?`第${st.wave}波完成！3 秒後自動開始下一波…`:`第${st.wave}波完成！準備下一波。`);
+      if(st.autoWave){st.autoWaveTimer=AW_DELAY;st._awSec=Math.ceil(AW_DELAY);}
+      setMsg(st.autoWave?`第${st.wave}波完成！${AW_DELAY}秒後自動開始下一波…`:`第${st.wave}波完成！準備下一波。`);
     }
   }
   if(st.autoWave&&st.autoWaveTimer>0&&st.phase==='prep'){
@@ -781,8 +782,8 @@ document.getElementById('sellBtn').addEventListener('click',()=>{
   const v=selTower.sellVal();st.gold+=v;towers=towers.filter(t=>t!==selTower);
   setMsg(`賣出塔，獲得 ${v}💰`);selTower=null;updateUI();
 });
-const SPEED_CYCLE=[1,2,3,4];
-const SPEED_LABELS=['🐌 1x','⚡ 2x','⚡⚡ 3x','⚡⚡⚡ 4x'];
+const SPEED_CYCLE=[1,2,3,4,5,6,7];
+const SPEED_LABELS=['🐌 1x','⚡ 2x','⚡⚡ 3x','⚡⚡⚡ 4x','🔥 5x','🔥🔥 6x','🔥🔥🔥 7x'];
 document.getElementById('speedBtn').addEventListener('click',()=>{
   const idx=SPEED_CYCLE.indexOf(st.speed);
   st.speed=SPEED_CYCLE[(idx+1)%SPEED_CYCLE.length];
@@ -796,8 +797,8 @@ document.getElementById('autoWaveBtn').addEventListener('click',()=>{
   btn.textContent=st.autoWave?'🔁 自動:開':'🔁 自動波';
   btn.style.background=st.autoWave?'#1b5e20':'#37474F';
   if(st.autoWave&&st.phase==='prep'&&st.wave<WAVES.length){
-    st.autoWaveTimer=3;st._awSec=3;
-    setMsg(`自動下波已開啟！3 秒後開始第${st.wave+1}波…`);
+    st.autoWaveTimer=AW_DELAY;st._awSec=Math.ceil(AW_DELAY);
+    setMsg(`自動下波已開啟！${AW_DELAY}秒後開始第${st.wave+1}波…`);
   }else if(!st.autoWave){setMsg('已關閉自動下波。');}
 });
 document.getElementById('tpX').addEventListener('click',()=>{deselectAll();updateUI();});
