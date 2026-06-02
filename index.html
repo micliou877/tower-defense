@@ -332,9 +332,27 @@ class Tower{
     this.cd=0;this.angle=-Math.PI/2;this.level=1;
     this.kills=0;this.selected=false;this.isMine=d.isMine;this.mineTimer=0;
   }
-  upgradeCost(){return Math.floor(TDEFS[this.type].cost*0.8*this.level);}
-  sellVal(){return Math.floor(TDEFS[this.type].cost*(0.5+(this.level-1)*0.25));}
-  upgrade(){this.level++;if(!this.isMine){this.dmg=Math.ceil(this.dmg*1.5);this.range=Math.ceil(this.range*1.12);this.rate*=1.12;}}
+  upgradeCost(){
+    const base=TDEFS[this.type].cost,lv=this.level;
+    return Math.floor(base*0.8*lv*(lv>=3?Math.pow(1.1,lv-2):1));
+  }
+  sellVal(){
+    const base=TDEFS[this.type].cost;
+    let total=base;
+    for(let i=1;i<this.level;i++)total+=Math.floor(base*0.8*i*(i>=3?Math.pow(1.1,i-2):1));
+    return Math.floor(total*0.6);
+  }
+  upgrade(){
+    this.level++;
+    if(!this.isMine){
+      const lv=this.level;
+      const dMult=lv<=3?1.5:1.5*Math.pow(1.05,lv-3);
+      const sMult=lv<=3?1.12:1.12*Math.pow(1.03,lv-3);
+      this.dmg=Math.ceil(this.dmg*dMult);
+      this.range=Math.ceil(this.range*sMult);
+      this.rate*=sMult;
+    }
+  }
   setLevel(n){for(let i=1;i<n;i++)this.upgrade();}
   update(dt,enemies,projectiles){
     if(this.isMine){
@@ -374,9 +392,9 @@ class Tower{
       const pulse=(Math.sin(Date.now()/400)*0.5+0.5);
       ctx.strokeStyle=`rgba(255,215,0,${pulse*0.55})`;ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,CELL*0.38+4+pulse*5,0,Math.PI*2);ctx.stroke();
     }
-    if(this.level>1){ctx.fillStyle='#FFD700';ctx.font='bold 9px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('★'.repeat(this.level-1),0,22);}
+    if(this.level>1){ctx.fillStyle='#FFD700';ctx.font='bold 9px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(this.level<=3?'★'.repeat(this.level-1):`Lv.${this.level}`,0,22);}
     ctx.restore();
-    if(this.selected){ctx.save();ctx.strokeStyle='rgba(255,220,50,0.55)';ctx.lineWidth=1.5;ctx.setLineDash([5,4]);ctx.beginPath();ctx.arc(this.x,this.y,this.range,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);ctx.restore();}
+    if(this.selected){ctx.save();ctx.strokeStyle='rgba(255,220,50,0.55)';ctx.lineWidth=1.5;ctx.setLineDash([5,4]);ctx.beginPath();ctx.arc(this.x,this.y,Math.min(this.range,CW),0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);ctx.restore();}
   }
 }
 
@@ -635,6 +653,12 @@ function startGame(mapId,fromSave=false){
 }
 
 // ── UI ────────────────────────────────────────
+function fmtNum(n){
+  if(n>=1e9)return(n/1e9).toFixed(1)+'B';
+  if(n>=1e6)return(n/1e6).toFixed(1)+'M';
+  if(n>=1e3)return(n/1e3).toFixed(1)+'K';
+  return Math.round(n).toString();
+}
 function setMsg(t){document.getElementById('msgBox').textContent=t;}
 function updateUI(){
   document.getElementById('goldV').textContent=st.gold;
@@ -655,12 +679,12 @@ function updateUI(){
       const am=MINE_GOLD[selTower.level-1],iv=MINE_IV[selTower.level-1];
       document.getElementById('tiStats').innerHTML=`產出: ${am}💰 / ${iv}秒<br>賣出: ${selTower.sellVal()}💰`;
     }else{
-      document.getElementById('tiStats').innerHTML=`傷害: ${selTower.dmg}<br>範圍: ${selTower.range}<br>射速: ${selTower.rate.toFixed(2)}/s<br>擊殺: ${selTower.kills}<br>賣出: ${selTower.sellVal()}💰`;
+      document.getElementById('tiStats').innerHTML=`傷害: ${fmtNum(selTower.dmg)}<br>範圍: ${fmtNum(selTower.range)}<br>射速: ${fmtNum(selTower.rate)}/s<br>擊殺: ${selTower.kills}<br>賣出: ${fmtNum(selTower.sellVal())}💰`;
     }
     const ub=document.getElementById('upgradeBtn');
-    if(selTower.level<3){ub.disabled=st.gold<selTower.upgradeCost();ub.textContent=`⬆ 升級 (${selTower.upgradeCost()}💰)`;}
-    else{ub.disabled=true;ub.textContent='已滿等 ★★★';}
-    document.getElementById('sellBtn').textContent=`💰 賣出 (+${selTower.sellVal()})`;
+    if(selTower.level<50){ub.disabled=st.gold<selTower.upgradeCost();ub.textContent=`⬆ Lv.${selTower.level+1} (${fmtNum(selTower.upgradeCost())}💰)`;}
+    else{ub.disabled=true;ub.textContent='已滿等 Lv.50';}
+    document.getElementById('sellBtn').textContent=`💰 賣出 (+${fmtNum(selTower.sellVal())})`;
     _pop.style.display='block';
     const _r=canvas.getBoundingClientRect();
     const _sx=_r.left+(selTower.x/CW)*_r.width;
