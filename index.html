@@ -61,11 +61,16 @@ body{background:#0d1117;display:flex;justify-content:center;align-items:center;m
 #retryBtn:disabled{background:#444;cursor:not-allowed;}
 #restartBtn2{background:#b71c1c;color:#fff;}
 #menuBtn{background:#37474F;color:#fff;}
-#towerInfo{background:#0f2040;border-radius:5px;padding:7px;border:1px solid #1e3a6a;display:none;}
-#tiName{font-size:12px;font-weight:bold;color:#7ec8ff;margin-bottom:3px;}
-#tiStats{font-size:10px;color:#999;margin-bottom:5px;line-height:1.7;}
-#upgradeBtn{background:#E65100;color:#fff;margin-bottom:3px;}
-#upgradeBtn:disabled{background:#444;cursor:not-allowed;}
+#towerPopup{position:fixed;background:#0f2040;border:2px solid #ffd700;border-radius:8px;padding:10px 12px;min-width:155px;z-index:200;display:none;box-shadow:0 6px 24px rgba(0,0,0,0.75);}
+#tpHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+#tiName{font-size:13px;font-weight:bold;color:#7ec8ff;}
+#tpX{background:none;border:none;color:#888;font-size:15px;cursor:pointer;padding:0;line-height:1;}
+#tpX:hover{color:#eee;}
+#tiStats{font-size:11px;color:#999;margin-bottom:7px;line-height:1.8;}
+.tp-row{display:flex;gap:5px;}
+.tp-row button{flex:1;padding:7px 4px;border:none;border-radius:4px;font-size:11px;font-weight:bold;cursor:pointer;}
+#upgradeBtn{background:#E65100;color:#fff;}
+#upgradeBtn:disabled{background:#444;cursor:not-allowed;opacity:0.65;}
 #sellBtn{background:#c62828;color:#fff;}
 .row3{display:flex;gap:4px;}
 .row3 button{flex:1;padding:6px 2px;border:none;border-radius:4px;font-size:11px;font-weight:bold;cursor:pointer;}
@@ -95,7 +100,6 @@ body{background:#0d1117;display:flex;justify-content:center;align-items:center;m
   .row2{flex:1 1 calc(50% - 3px);}
   .cbtn{min-height:44px;font-size:12px;padding:10px 4px;}
   #menuBtn{flex:1 1 100%;}
-  #towerInfo{flex:1 1 100%;}
   #tiStats{font-size:11px;}
   .row3{flex:1 1 100%;}
   .row3 button{min-height:40px;font-size:12px;}
@@ -179,12 +183,6 @@ body{background:#0d1117;display:flex;justify-content:center;align-items:center;m
       <button class="cbtn" id="restartBtn2">🔄 重新關卡</button>
     </div>
     <button class="cbtn" id="menuBtn">🗺 地圖選擇</button>
-    <div id="towerInfo">
-      <div id="tiName">塔名</div>
-      <div id="tiStats"></div>
-      <button class="cbtn" id="upgradeBtn">⬆ 升級</button>
-      <button class="cbtn" id="sellBtn">💰 賣出</button>
-    </div>
     <div class="row3">
       <button id="speedBtn">🐌 1x</button>
       <button id="autoWaveBtn">🔁 自動波</button>
@@ -192,6 +190,15 @@ body{background:#0d1117;display:flex;justify-content:center;align-items:center;m
     </div>
     <div id="msgBox">選擇一種塔，點擊草地建造。</div>
     <button id="restartGameOver">🔄 重新開始</button>
+  </div>
+</div>
+
+<div id="towerPopup">
+  <div id="tpHead"><span id="tiName"></span><button id="tpX">✕</button></div>
+  <div id="tiStats"></div>
+  <div class="tp-row">
+    <button id="upgradeBtn">⬆ 升級</button>
+    <button id="sellBtn">💰 賣出</button>
   </div>
 </div>
 
@@ -640,8 +647,8 @@ function updateUI(){
   const wb=document.getElementById('waveBtn');
   if(st.phase==='prep'&&st.wave<WAVES.length){wb.disabled=false;wb.textContent=`▶ 開始第${st.wave+1}波`;}
   else wb.disabled=true;
+  const _pop=document.getElementById('towerPopup');
   if(selTower){
-    document.getElementById('towerInfo').style.display='block';
     const d=TDEFS[selTower.type];
     document.getElementById('tiName').textContent=`${d.name} Lv.${selTower.level}`;
     if(selTower.isMine){
@@ -654,7 +661,19 @@ function updateUI(){
     if(selTower.level<3){ub.disabled=st.gold<selTower.upgradeCost();ub.textContent=`⬆ 升級 (${selTower.upgradeCost()}💰)`;}
     else{ub.disabled=true;ub.textContent='已滿等 ★★★';}
     document.getElementById('sellBtn').textContent=`💰 賣出 (+${selTower.sellVal()})`;
-  }else document.getElementById('towerInfo').style.display='none';
+    _pop.style.display='block';
+    const _r=canvas.getBoundingClientRect();
+    const _sx=_r.left+(selTower.x/CW)*_r.width;
+    const _sy=_r.top+(selTower.y/CH)*_r.height;
+    const _pw=_pop.offsetWidth||160,_ph=_pop.offsetHeight||120;
+    let _px=_sx+(CELL/CW)*_r.width+8;
+    let _py=_sy-_ph/2;
+    if(_px+_pw>window.innerWidth-8)_px=_sx-_pw-8;
+    if(_py<8)_py=8;
+    if(_py+_ph>window.innerHeight-8)_py=window.innerHeight-_ph-8;
+    _pop.style.left=_px+'px';
+    _pop.style.top=_py+'px';
+  }else{_pop.style.display='none';}
 }
 function deselectTower(){if(selTower){selTower.selected=false;selTower=null;}}
 function deselectAll(){deselectTower();selType=null;document.querySelectorAll('.tbtn').forEach(b=>b.classList.remove('sel'));}
@@ -757,6 +776,7 @@ document.getElementById('autoWaveBtn').addEventListener('click',()=>{
     setMsg(`自動下波已開啟！3 秒後開始第${st.wave+1}波…`);
   }else if(!st.autoWave){setMsg('已關閉自動下波。');}
 });
+document.getElementById('tpX').addEventListener('click',()=>{deselectAll();updateUI();});
 document.getElementById('restartGameOver').addEventListener('click',restartLevel);
 window.addEventListener('keydown',e=>{
   if(e.key==='Escape'){deselectAll();updateUI();}
